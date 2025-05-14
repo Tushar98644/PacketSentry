@@ -1,0 +1,33 @@
+package main
+
+import (
+    "context"
+    "fmt"
+    "log"
+    "os"
+    "os/signal"
+
+    "github.com/Tushar98644/PacketSentry/pkg/config"
+)
+
+func main() {
+    cfg := config.New()
+    cfg.ParseFlags()
+
+    if err := cfg.Validate(); err != nil {
+        log.Fatalf("config error: %v", err)
+    }
+
+    fmt.Printf("Configuration:\n")
+    fmt.Printf("  live capture  = %v\n", cfg.LiveCapture)
+    fmt.Printf("  pcap filename = %s.pcap\n", cfg.FileName)
+    fmt.Printf("  max packets   = %d\n", cfg.MaxPackets)
+    fmt.Printf("  local-known   = %v\n", cfg.LocalIPKnown)
+    fmt.Printf("  local-ip      = %q\n", cfg.LocalIP)
+
+    ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+    defer stop()
+
+	<-ctx.Done()
+    fmt.Println("Shutting down gracefully")
+}
