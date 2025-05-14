@@ -1,0 +1,5 @@
+# .gitignore
+/bin/
+/pkg/mod/
+*.exe
+*.log
