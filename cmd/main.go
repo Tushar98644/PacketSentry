@@ -13,6 +13,7 @@ import (
     "github.com/Tushar98644/PacketSentry/pkg/config"
     "github.com/Tushar98644/PacketSentry/pkg/pcap"
     "github.com/Tushar98644/PacketSentry/pkg/flow"
+    "github.com/Tushar98644/PacketSentry/pkg/features"
 )
 
 func main() {
@@ -43,7 +44,28 @@ func main() {
     packetCh := pcap.ReadPackets(handle)
     flows := flow.Aggregate(packetCh)
 
-    fmt.Printf("Aggregated %d flows\n", len(flows))
+    fmt.Printf("Computed features for %d flows:\n\n", len(flows))
+
+    for i, f := range flows {
+        feats := features.FromFlow(f)
+        fmt.Printf("Flow %d:\n", i+1)
+        fmt.Printf("  Duration: %v\n", feats.Duration)
+        fmt.Printf("  Packet count: %d\n", feats.PacketCount)
+        fmt.Printf("  Packet size → count=%d mean=%.2f min=%d max=%d std=%.2f\n",
+            feats.PacketStats.Count,
+            feats.PacketStats.Mean,
+            feats.PacketStats.Min,
+            feats.PacketStats.Max,
+            feats.PacketStats.Std,
+        )
+        fmt.Printf("  IAT → count=%d mean=%v min=%v max=%v std=%v\n\n",
+            feats.IATStats.Count,
+            feats.IATStats.Mean,
+            feats.IATStats.Min,
+            feats.IATStats.Max,
+            feats.IATStats.Std,
+        )
+    }
 
     ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
     defer stop()
