@@ -1,0 +1,14 @@
+Duration_ms
+PacketCount
+PktCount
+PktSum
+PktMean
+PktMin
+PktMax
+PktStd
+IATCount
+IATSum_ms
+IATMean_ms
+IATMin_ms
+IATMax_ms
+IATStd_ms

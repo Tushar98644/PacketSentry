@@ -3,3 +3,4 @@
 /pkg/mod/
 *.exe
 *.log
+venv/

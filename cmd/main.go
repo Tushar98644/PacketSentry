@@ -6,6 +6,7 @@ import (
     "log"
     "os"
     "os/signal"
+    "time"
 
     gp "github.com/google/gopacket/pcap"
 
@@ -14,6 +15,7 @@ import (
     "github.com/Tushar98644/PacketSentry/pkg/flow"
     "github.com/Tushar98644/PacketSentry/pkg/features"
     "github.com/Tushar98644/PacketSentry/pkg/output"
+    "github.com/Tushar98644/PacketSentry/internal/ml"
 )
 
 func main() {
@@ -81,22 +83,31 @@ func main() {
         log.Fatalf("could not load ML model: %v", err)
     }
 
-    for i, feats := range allFeats {
+    fmt.Println("Flow classification:")
+    for i, ftr := range allFeats {
         raw := []float64{
-            float64(feats.Duration) / float64(time.Millisecond),
-            float64(feats.PacketCount),
-            feats.PacketStats.Mean,
-            feats.PacketStats.Std,
+            float64(ftr.Duration) / float64(time.Millisecond),
+            float64(ftr.PacketCount),
+            ftr.PacketStats.Mean,
+            ftr.PacketStats.Std,
+            float64(ftr.PacketStats.Min),
+            float64(ftr.PacketStats.Max),
+            float64(ftr.PacketStats.Sum),
+            float64(ftr.IATStats.Count),
+            float64(ftr.IATStats.Mean) / float64(time.Millisecond),
+            float64(ftr.IATStats.Min) / float64(time.Millisecond),
+            float64(ftr.IATStats.Max) / float64(time.Millisecond),
+            float64(ftr.IATStats.Std) / float64(time.Millisecond),
         }
         prob, err := model.Predict(raw)
         if err != nil {
-            log.Fatalf("predict error: %v", err)
+            log.Fatalf("prediction error on flow %d: %v", i+1, err)
         }
         label := "benign"
         if prob > 0.5 {
             label = "malicious"
         }
-        fmt.Printf("Flow %d: probability=%.3f → %s\n", i+1, prob, label)
+        fmt.Printf("  Flow %2d: prob=%.3f → %s\n", i+1, prob, label)
     }
 
     ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
