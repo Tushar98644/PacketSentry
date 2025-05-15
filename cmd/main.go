@@ -14,6 +14,7 @@ import (
     "github.com/Tushar98644/PacketSentry/pkg/pcap"
     "github.com/Tushar98644/PacketSentry/pkg/flow"
     "github.com/Tushar98644/PacketSentry/pkg/features"
+    "github.com/Tushar98644/PacketSentry/pkg/output"
 )
 
 func main() {
@@ -45,7 +46,8 @@ func main() {
     flows := flow.Aggregate(packetCh)
 
     fmt.Printf("Computed features for %d flows:\n\n", len(flows))
-
+    
+    var allFeats []features.FlowFeatures
     for i, f := range flows {
         feats := features.FromFlow(f)
         fmt.Printf("Flow %d:\n", i+1)
@@ -65,7 +67,15 @@ func main() {
             feats.IATStats.Max,
             feats.IATStats.Std,
         )
+
+        allFeats = append(allFeats, feats)
     }
+
+    csvPath := fmt.Sprintf("%s_features.csv", cfg.FileName)
+    if err := output.WriteFlowFeaturesCSV(csvPath, allFeats); err != nil {
+        log.Fatalf("error writing CSV: %v", err)
+    }
+    fmt.Printf("Features written to %s\n", csvPath)
 
     ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
     defer stop()
