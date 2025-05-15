@@ -3,6 +3,7 @@ package config
 import (
     "flag"
     "fmt"
+    "time"
 )
 
 type Config struct {
@@ -11,15 +12,24 @@ type Config struct {
     MaxPackets    int
     LocalIPKnown  bool 
     LocalIP       string
+
+    Device        string
+    SnapshotLen   int32
+    Promiscuous   bool
+    Timeout       time.Duration
 }
 
 func New() *Config {
     return &Config{
-        LiveCapture:  false,
+        LiveCapture:  true,
         FileName:     "capture",
-        MaxPackets:   1000,
+        MaxPackets:   10,
         LocalIPKnown: false,
         LocalIP:      "",
+        Device:      "en0",
+        SnapshotLen: 1024,
+        Promiscuous: false,
+        Timeout:     30 * time.Second,
     }
 }
 
@@ -40,6 +50,9 @@ func (cfg *Config) ParseFlags() {
 
     flag.StringVar(&cfg.LocalIP, "local-ip", cfg.LocalIP,
         "your local IP address (required if local-known=true)")
+
+    flag.StringVar(&cfg.Device, "device", cfg.Device,
+        "network device to capture packets from")
 
     // Actually parse the flags from os.Args
     flag.Parse()

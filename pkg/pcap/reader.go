@@ -15,10 +15,10 @@ import (
 func OpenHandle(cfg *config.Config) (*pcap.Handle, error) {
     if cfg.LiveCapture {
         return pcap.OpenLive(
-            constants.Device,
-            constants.SnapshotLen,
-            constants.Promiscuous,
-            constants.Timeout,
+            cfg.Device,
+            cfg.SnapshotLen,
+            cfg.Promiscuous,
+            cfg.Timeout,
         )
     }
 

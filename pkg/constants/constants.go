@@ -7,10 +7,6 @@ import (
 )
 
 const (
-	Device             string        = "eth0"
-	SnapshotLen        int32         = 1024
-	Promiscuous        bool          = false
-	Timeout            time.Duration = 30 * time.Second
 	MinPacketsPerFlow  int           = 15
 	MaxPacketsPerFlow  int           = 82
 	MinTimeDuration    time.Duration = 0 * time.Millisecond
