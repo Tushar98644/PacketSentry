@@ -7,9 +7,12 @@ import (
     "os"
     "os/signal"
     "time"
+    "encoding/csv"
     "path/filepath"
     "strings"
-
+    "strconv"
+    "github.com/go-echarts/go-echarts/v2/charts"
+    "github.com/go-echarts/go-echarts/v2/opts"
     gp "github.com/google/gopacket/pcap"
 
     "github.com/Tushar98644/PacketSentry/pkg/config"
@@ -92,8 +95,28 @@ func main() {
     if err != nil {
         log.Fatalf("could not load ML model: %v", err)
     }
+    fmt.Println("Loaded model successfully")
 
-    fmt.Println("Flow classification:")
+    resultsPath := "data/results/" + baseName + ".csv"
+    os.MkdirAll("data/results", os.ModePerm)
+    rf, err := os.Create(resultsPath)
+    if err != nil {
+        log.Fatalf("failed to create results file: %v", err)
+    }
+    defer rf.Close()
+
+    writer := csv.NewWriter(rf)
+    defer writer.Flush()
+    writer.Write([]string{
+        "FlowID",
+        "Duration_ms", "PacketCount", "PktCount", "PktSum", "PktMean", "PktMin", "PktMax", "PktStd",
+        "IATCount", "IATSum_ms", "IATMean_ms", "IATMin_ms", "IATMax_ms", "IATStd_ms",
+        "Probability", "Label",
+    })    
+
+    var chartData []opts.BarData
+    var xLabels []string
+
     for i, ftr := range allFeats {
         raw := []float64 {
             float64(ftr.Duration) / float64(time.Millisecond),
@@ -114,14 +137,75 @@ func main() {
         prob, err := model.Predict(raw)
         if err != nil {
             log.Fatalf("prediction error on flow %d: %v", i+1, err)
+            continue
         }
+
         label := "benign"
         if prob > 0.5 {
             label = "malicious"
         }
-        fmt.Printf("  Flow %2d: prob=%.3f → %s\n", i+1, prob, label)
-    }
 
+        row := []string{
+            strconv.Itoa(i + 1),
+            fmt.Sprintf("%.3f", float64(ftr.Duration)/float64(time.Millisecond)),
+            strconv.Itoa(ftr.PacketCount),
+            strconv.Itoa(ftr.PacketStats.Count),
+            strconv.Itoa(ftr.PacketStats.Sum),
+            fmt.Sprintf("%.3f", ftr.PacketStats.Mean),
+            strconv.Itoa(ftr.PacketStats.Min),
+            strconv.Itoa(ftr.PacketStats.Max),
+            fmt.Sprintf("%.3f", ftr.PacketStats.Std),
+        
+            strconv.Itoa(ftr.IATStats.Count),
+            fmt.Sprintf("%.3f", float64(ftr.IATStats.Sum)/float64(time.Millisecond)),
+            fmt.Sprintf("%.3f", float64(ftr.IATStats.Mean)/float64(time.Millisecond)),
+            fmt.Sprintf("%.3f", float64(ftr.IATStats.Min)/float64(time.Millisecond)),
+            fmt.Sprintf("%.3f", float64(ftr.IATStats.Max)/float64(time.Millisecond)),
+            fmt.Sprintf("%.3f", float64(ftr.IATStats.Std)/float64(time.Millisecond)),
+        
+            fmt.Sprintf("%.3f", prob),
+            label,
+        }
+        
+        if err := writer.Write(row); err != nil {
+            log.Printf("error writing CSV row for flow %d: %v", i+1, err)
+        } else {
+            writer.Flush() 
+        }
+        
+        chartData = append(chartData, opts.BarData{Value: prob})
+        xLabels = append(xLabels, "Flow "+strconv.Itoa(i+1))
+    }
+    fmt.Printf("Successfully wrote %d flows to %s\n", len(allFeats), resultsPath)
+    fmt.Println("Results written to " + resultsPath)
+
+    // Generate chart
+    bar := charts.NewBar()
+    bar.SetGlobalOptions(
+        charts.WithTitleOpts(opts.Title{
+            Title: "Flow Probability Chart",
+        }),
+        charts.WithYAxisOpts(opts.YAxis{Name: "Probability"}),
+        charts.WithXAxisOpts(opts.XAxis{Name: "Flow ID"}),
+    )
+
+    bar.SetXAxis(xLabels).
+        AddSeries("Malicious Probability", chartData)
+
+    chartFile, err := os.Create("data/results/" + baseName + "_chart.html")
+    if err != nil {
+        log.Fatalf("could not create chart file: %v", err)
+    }
+    defer chartFile.Close()
+
+    if err := bar.Render(chartFile); err != nil {
+        log.Fatalf("chart rendering failed: %v", err)
+    }
+    fmt.Printf("Chart written to %s\n", "data/results/" + baseName + "_chart.html")
+    
+    fmt.Println("Press Ctrl+C to exit")
+
+    // Wait for interrupt signal
     ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
     defer stop()
     <-ctx.Done()
