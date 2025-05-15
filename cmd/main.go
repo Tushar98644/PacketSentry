@@ -1,4 +1,3 @@
-// cmd/main.go
 package main
 
 import (
@@ -76,6 +75,29 @@ func main() {
         log.Fatalf("error writing CSV: %v", err)
     }
     fmt.Printf("Features written to %s\n", csvPath)
+
+    model, err := ml.LoadModel("ml/parameters")
+    if err != nil {
+        log.Fatalf("could not load ML model: %v", err)
+    }
+
+    for i, feats := range allFeats {
+        raw := []float64{
+            float64(feats.Duration) / float64(time.Millisecond),
+            float64(feats.PacketCount),
+            feats.PacketStats.Mean,
+            feats.PacketStats.Std,
+        }
+        prob, err := model.Predict(raw)
+        if err != nil {
+            log.Fatalf("predict error: %v", err)
+        }
+        label := "benign"
+        if prob > 0.5 {
+            label = "malicious"
+        }
+        fmt.Printf("Flow %d: probability=%.3f → %s\n", i+1, prob, label)
+    }
 
     ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
     defer stop()
