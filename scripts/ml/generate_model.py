@@ -70,6 +70,7 @@ def main():
         random_state=args.random_state,
         solver='lbfgs',
         max_iter=1000,
+        class_weight='balanced',
     )
     clf.fit(X_scaled, y)
     weights = clf.coef_[0]

@@ -7,6 +7,8 @@ import (
     "os"
     "os/signal"
     "time"
+    "path/filepath"
+    "strings"
 
     gp "github.com/google/gopacket/pcap"
 
@@ -72,7 +74,15 @@ func main() {
         allFeats = append(allFeats, feats)
     }
 
-    csvPath := fmt.Sprintf("%s_features.csv", cfg.FileName)
+    baseName := filepath.Base(cfg.FileName)
+    nameOnly := strings.TrimSuffix(baseName, filepath.Ext(baseName))
+    csvDir := "data/raw"
+
+    if err := os.MkdirAll(csvDir, os.ModePerm); err != nil {
+        log.Fatalf("could not create directory %s: %v", csvDir, err)
+    }
+
+    csvPath := filepath.Join(csvDir, fmt.Sprintf("%s_features.csv", nameOnly))
     if err := output.WriteFlowFeaturesCSV(csvPath, allFeats); err != nil {
         log.Fatalf("error writing CSV: %v", err)
     }
@@ -85,20 +95,22 @@ func main() {
 
     fmt.Println("Flow classification:")
     for i, ftr := range allFeats {
-        raw := []float64{
+        raw := []float64 {
             float64(ftr.Duration) / float64(time.Millisecond),
             float64(ftr.PacketCount),
+            float64(ftr.PacketStats.Count),
+            float64(ftr.PacketStats.Sum),
             ftr.PacketStats.Mean,
-            ftr.PacketStats.Std,
             float64(ftr.PacketStats.Min),
             float64(ftr.PacketStats.Max),
-            float64(ftr.PacketStats.Sum),
+            ftr.PacketStats.Std,
             float64(ftr.IATStats.Count),
+            float64(ftr.IATStats.Sum) / float64(time.Millisecond),
             float64(ftr.IATStats.Mean) / float64(time.Millisecond),
             float64(ftr.IATStats.Min) / float64(time.Millisecond),
             float64(ftr.IATStats.Max) / float64(time.Millisecond),
             float64(ftr.IATStats.Std) / float64(time.Millisecond),
-        }
+        }        
         prob, err := model.Predict(raw)
         if err != nil {
             log.Fatalf("prediction error on flow %d: %v", i+1, err)
