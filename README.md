@@ -71,20 +71,18 @@ Run as sudo for live packet capture
 
 After execution, you will get the following:
 
-- **Processed Features** 
-
-    `data/processed/<filename>_features.csv`  
+- **Processed Features** - `data/processed/<filename>_features.csv`
+   
     Contains the 14 statistical features extracted per flow.
   
-- **Prediction Results**  
-
-    `data/results/<filename>.csv`  
+- **Prediction Results** - `data/results/<filename>.csv`
+    
     Each row includes:
     - 14 features
     - 5-tuple metadata (src IP, dst IP, src port, dst port, protocol)
     - Probability (0–1)
     - Label (benign or malicious)
 
-- **Flow Probability Chart**  
-    `data/results/<filename>_chart.html`  
+- **Flow Probability Chart** - `data/results/<filename>_chart.html`
+   
     Opens in browser and shows the predicted malicious probabilities per flow.
