@@ -15,7 +15,7 @@ import (
     "github.com/go-echarts/go-echarts/v2/opts"
     gp "github.com/google/gopacket/pcap"
 
-    "github.com/Tushar98644/entry/pkg/config"
+    "github.com/Tushar98644/PacketSentry/pkg/config"
     "github.com/Tushar98644/PacketSentry/pkg/pcap"
     "github.com/Tushar98644/PacketSentry/pkg/flow"
     "github.com/Tushar98644/PacketSentry/pkg/features"
@@ -73,24 +73,7 @@ func main() {
     var allFeats []features.FlowFeatures
     for i, f := range flows {
         feats := features.FromFlow(f)
-        fmt.Printf("Flow %d:\n", i+1)
-        fmt.Printf("  Duration: %v\n", feats.Duration)
-        fmt.Printf("  Packet count: %d\n", feats.PacketCount)
-        fmt.Printf("  Packet size → count=%d mean=%.2f min=%d max=%d std=%.2f\n",
-            feats.PacketStats.Count,
-            feats.PacketStats.Mean,
-            feats.PacketStats.Min,
-            feats.PacketStats.Max,
-            feats.PacketStats.Std,
-        )
-        fmt.Printf("  IAT → count=%d mean=%v min=%v max=%v std=%v\n\n",
-            feats.IATStats.Count,
-            feats.IATStats.Mean,
-            feats.IATStats.Min,
-            feats.IATStats.Max,
-            feats.IATStats.Std,
-        )
-
+        fmt.Printf("Flow %d: %s:%d -> %s:%d (%s)\n", i+1, f.SrcIP, f.SrcPort, f.DstIP, f.DstPort, f.Protocol)
         allFeats = append(allFeats, feats)
     }
 
@@ -126,6 +109,7 @@ func main() {
     defer writer.Flush()
     writer.Write([]string{
         "FlowID",
+        "SrcIP", "DstIP", "SrcPort", "DstPort", "Protocol",
         "Duration_ms", "PacketCount", "PktCount", "PktSum", "PktMean", "PktMin", "PktMax", "PktStd",
         "IATCount", "IATSum_ms", "IATMean_ms", "IATMin_ms", "IATMax_ms", "IATStd_ms",
         "Probability", "Label",
@@ -164,6 +148,11 @@ func main() {
 
         row := []string{
             strconv.Itoa(i + 1),
+            ftr.SrcIP.String(),
+            ftr.DstIP.String(),
+            strconv.Itoa(int(ftr.SrcPort)),
+            strconv.Itoa(int(ftr.DstPort)),
+            ftr.Protocol,
             fmt.Sprintf("%.3f", float64(ftr.Duration)/float64(time.Millisecond)),
             strconv.Itoa(ftr.PacketCount),
             strconv.Itoa(ftr.PacketStats.Count),
