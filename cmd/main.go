@@ -15,12 +15,13 @@ import (
     "github.com/go-echarts/go-echarts/v2/opts"
     gp "github.com/google/gopacket/pcap"
 
-    "github.com/Tushar98644/PacketSentry/pkg/config"
+    "github.com/Tushar98644/entry/pkg/config"
     "github.com/Tushar98644/PacketSentry/pkg/pcap"
     "github.com/Tushar98644/PacketSentry/pkg/flow"
     "github.com/Tushar98644/PacketSentry/pkg/features"
     "github.com/Tushar98644/PacketSentry/pkg/output"
     "github.com/Tushar98644/PacketSentry/internal/ml"
+    "github.com/Tushar98644/PacketSentry/pkg/crypto"
 )
 
 func main() {
@@ -28,6 +29,22 @@ func main() {
     cfg.ParseFlags()
     if err := cfg.Validate(); err != nil {
         log.Fatalf("config error: %v", err)
+    }
+
+    if cfg.DecryptMode {
+        data, err := os.ReadFile(cfg.DecryptIn)
+        if err != nil {
+            log.Fatalf("decrypt: cannot read %s: %v", cfg.DecryptIn, err)
+        }
+        plain, err := crypto.Decrypt(data, cfg.DecryptKey)
+        if err != nil {
+            log.Fatalf("decrypt: failed: %v", err)
+        }
+        if err := os.WriteFile(cfg.DecryptOut, plain, 0644); err != nil {
+            log.Fatalf("decrypt: write failed: %v", err)
+        }
+        fmt.Printf("Decrypted output written to %s\n", cfg.DecryptOut)
+        return
     }
 
     if cfg.LiveCapture {
@@ -178,6 +195,23 @@ func main() {
     }
     fmt.Printf("Successfully wrote %d flows to %s\n", len(allFeats), resultsPath)
     fmt.Println("Results written to " + resultsPath)
+
+    if cfg.EncryptKey != "" {
+        pt, err := os.ReadFile(resultsPath)
+        if err != nil {
+            log.Fatalf("encrypt: cannot read %s: %v", resultsPath, err)
+        }
+        ct, err := crypto.Encrypt(pt, cfg.EncryptKey)
+        if err != nil {
+            log.Fatalf("encrypt: failed: %v", err)
+        }
+        encPath := resultsPath + ".enc"
+        if err := os.WriteFile(encPath, ct, 0644); err != nil {
+            log.Fatalf("encrypt: write failed: %v", err)
+        }
+        os.Remove(resultsPath)
+        fmt.Printf("Encrypted output written to %s\n", encPath)
+    }    
 
     // Generate chart
     bar := charts.NewBar()

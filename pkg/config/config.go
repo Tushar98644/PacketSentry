@@ -17,6 +17,12 @@ type Config struct {
     SnapshotLen   int32
     Promiscuous   bool
     Timeout       time.Duration
+
+    EncryptKey  string `flag:"encrypt-key" help:"Passphrase to encrypt output files (optional)"`
+    DecryptKey  string `flag:"decrypt-key" help:"Passphrase to decrypt an encrypted results file"`
+    DecryptMode bool   `flag:"decrypt"     help:"Run in decryption mode (reads .enc, writes plaintext)"`
+    DecryptIn   string `flag:"in"          help:"Input .enc file path (required in decrypt mode)"`
+    DecryptOut  string `flag:"out"         help:"Output plaintext file path (required in decrypt mode)"`
 }
 
 func New() *Config {
@@ -54,7 +60,12 @@ func (cfg *Config) ParseFlags() {
     flag.StringVar(&cfg.Device, "device", cfg.Device,
         "network device to capture packets from")
 
-    // Actually parse the flags from os.Args
+    flag.StringVar(&cfg.EncryptKey, "encrypt-key", "", "Passphrase to encrypt output files (optional)")
+    flag.StringVar(&cfg.DecryptKey, "decrypt-key", "", "Passphrase to decrypt an encrypted results file")
+    flag.BoolVar(&cfg.DecryptMode, "decrypt", false, "Run in decryption mode (reads .enc, writes plaintext)")
+    flag.StringVar(&cfg.DecryptIn, "in", "", "Input .enc file path (required in decrypt mode)")
+    flag.StringVar(&cfg.DecryptOut, "out", "", "Output plaintext file path (required in decrypt mode)")
+
     flag.Parse()
 }
 
@@ -64,6 +75,14 @@ func (cfg *Config) Validate() error {
     }
     if cfg.LocalIPKnown && cfg.LocalIP == "" {
         return fmt.Errorf("local-ip must be provided when local-known=true")
+    }
+    if cfg.DecryptMode {
+        if cfg.DecryptKey == "" || cfg.DecryptIn == "" || cfg.DecryptOut == "" {
+            return fmt.Errorf("decrypt mode requires --decrypt-key, --in, and --out")
+        }
+    }
+    if cfg.EncryptKey != "" && cfg.DecryptMode {
+        return fmt.Errorf("--encrypt-key cannot be used with --decrypt")
     }
     return nil
 }
