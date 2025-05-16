@@ -28,7 +28,7 @@
 
 **Clone the Repository**
 ```bash
-git clone https://github.com/your-username/PacketSentry.git
+git clone https://github.com/Tushar98644/PacketSentry.git
 cd PacketSentry
 ```
 
